@@ -7,6 +7,7 @@ import 'package:bubble_trouble/myplayer.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'mymissile.dart';
 
@@ -28,8 +29,9 @@ class _HomepageState extends State<Homepage> {
   // Player starts with 3 lives
   int lives = 3;
 
-  // score variable
+  // score variables
   int score=0;
+  int highScore=0;
 
   // player variables
    static  double playerX =0;
@@ -45,61 +47,87 @@ class _HomepageState extends State<Homepage> {
    double ballY = 1;
    var ballDirection = direction.LEFT;
 
+  Color buttonColor = Colors.brown[200]!;
+
    void startGame(){
-     gameStarted =true;
+     setState(() {
+       gameStarted = true;
+     });
+
+     startBallMotion();
+   }
+
+   void startBallMotion(){
      double time=0;
      double height=0;
-     double velocity =60; // how strong jump is
-    gameLoopTimer=Timer.periodic(Duration(milliseconds: 10), (timer) {
-      // quadratic equation that models a bounce (upside down parabola)
-      height = -5 * time * time + velocity * time;
-
-      // if ball reaches the ground, reset the jump
-      if(height<0){
-        time =0;
-      }
-
-      // update the new ball position
-      setState(() {
-        ballY = heightToPosition(height);
-      });
+     // how strong jump is
+     double velocity =80;
 
 
-      // if the ball hits the left wall, then change direction to right
-      if(ballX - 0.005 < -1){
-        ballDirection = direction.RIGHT;
-      }
+     gameLoopTimer?.cancel();
+     gameLoopTimer=Timer.periodic(Duration(milliseconds: 10), (timer) {
+       // quadratic equation that models a bounce (upside down parabola)
+       height = -5 * time * time + velocity * time;
 
-      // if the ball hits the right wall, then change direction to left
-      else if(ballX + 0.005 > 1){
-        ballDirection = direction.LEFT;
-      }
+       // if ball reaches the ground, reset the jump
+       if(height<0){
+         time =0;
+       }
 
-      // move the ball in the correct direction
-      if(ballDirection == direction.LEFT){
-        setState(() {
-          ballX -= 0.005;
-        });
-      }
-      else if(ballDirection == direction.RIGHT){
-        setState(() {
-          ballX += 0.005;
-        });
-      }
+       // update the new ball position
+       setState(() {
+         ballY = heightToPosition(height);
+       });
 
-      // check if ball hits the player
-      if(playerDies()){
-        timer.cancel();
-       // _showDialog();
-       gameStarted = false; // reset game state on death
-      }
 
-      // keep the time going!
-      time += 0.1;
+       // if the ball hits the left wall, then change direction to right
+       if(ballX - 0.005 < -1){
+         ballDirection = direction.RIGHT;
+       }
 
-    });
+       // if the ball hits the right wall, then change direction to left
+       else if(ballX + 0.005 > 1){
+         ballDirection = direction.LEFT;
+       }
+
+       // move the ball in the correct direction
+       if(ballDirection == direction.LEFT){
+         setState(() {
+           ballX -= 0.005;
+         });
+       }
+       else if(ballDirection == direction.RIGHT){
+         setState(() {
+           ballX += 0.005;
+         });
+       }
+
+       // check if ball hits the player
+       if(playerDies()){
+         if(lives<=0){
+           timer.cancel();
+         }else {
+           timer.cancel();
+         }
+       }
+
+       // keep the time going!
+       time += 0.1;
+
+     });
    }
-   
+
+   // save the high score locally  to the device
+  void initState(){
+    super.initState();
+    loadHighScore();
+  }
+  void loadHighScore() async{
+     SharedPreferences score = await SharedPreferences.getInstance();
+     score.setInt('highScore', highScore);
+   }
+
+
    void _showDialog(){
      showDialog(
        context: context,
@@ -108,18 +136,19 @@ class _HomepageState extends State<Homepage> {
        return AlertDialog(shape: RoundedRectangleBorder(
          borderRadius: BorderRadius.circular(20),
        ),
-         backgroundColor: Colors.purpleAccent[600],
+         backgroundColor: Colors.purple,
          title: Column(
            children: [
              Icon(Icons.sentiment_dissatisfied_outlined,
-             color: Colors.redAccent,
+             color: Colors.yellowAccent,
                  size: 50,),
              SizedBox(height: 10,),
              Text(
                'GAME OVER',
                style: TextStyle(
-                 color: Colors.black,
-                 fontWeight: FontWeight.bold,
+                 fontSize: 20,
+                 fontFamily: 'PressStart',
+                 color: Colors.white,
                  letterSpacing: 2
                ),
              ),
@@ -131,8 +160,10 @@ class _HomepageState extends State<Homepage> {
              Text(
                  'Your Score:$score',
              style: TextStyle(
-               color: Colors.amber,
-               fontSize: 20,
+               fontFamily: 'PressStart',
+               color: Colors.yellowAccent,
+               fontSize: 15,
+               letterSpacing: 1,
                fontWeight: FontWeight.w600
              ),)
            ],
@@ -143,15 +174,16 @@ class _HomepageState extends State<Homepage> {
             Navigator.pop(context);
             resetGame();
           },
-              icon: Icon(Icons.refresh,color: Colors.white,),
-              label: Text(''
-         'Play Again',
+              // icon: Icon(Icons.refresh,color: Colors.white,),
+              label: Text('Replay',
               style: TextStyle(
-                color: Colors.white
+                fontFamily: 'PressStart',
+                fontSize: 10,
+                color: Colors.purpleAccent
               ),
               ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
+              backgroundColor: Colors.white,
               padding: EdgeInsets.symmetric(horizontal: 20, vertical:12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)
@@ -161,6 +193,13 @@ class _HomepageState extends State<Homepage> {
          ],
        );
      },);
+
+     // high score tracker
+     if(score>highScore){
+       setState(() {
+         highScore = score;
+       });
+     }
    }
 
    // movements of the player
@@ -260,16 +299,24 @@ class _HomepageState extends State<Homepage> {
   }
 
   bool playerDies(){
+
+    // Player width boundaries
+    double playerLeftEdge = playerX - 0.1;
+    double playerRightEdge = playerX + 0.1;
+
      // if the ball position & the player position
     // are the same, then player dies
-    if ((ballX - playerX).abs() < 0.05 && ballY > 0.95) {
+    //(ballX - playerX).abs() < 0.05 && ballY > 0.95
+    if (ballY > 0.95 && ballX > playerLeftEdge && ballX <playerRightEdge) {
+
+      gameLoopTimer?.cancel();
+
       setState(() {
         lives--;
       });
 
       if (lives <= 0) {
-        gameLoopTimer?.cancel();
-        _showDialog();
+        // gameLoopTimer?.cancel();
         gameStarted = false;
         _showDialog();
       } else {
@@ -283,6 +330,8 @@ class _HomepageState extends State<Homepage> {
             ballY = 1;
             ballDirection = fromLeft ? direction.RIGHT : direction.LEFT;
           });
+
+          startBallMotion();
         });
       }
 
@@ -290,12 +339,6 @@ class _HomepageState extends State<Homepage> {
     }
 
     return false;
-    // if((ballX - playerX).abs()< 0.05 && ballY > 0.95){
-    //   return true;
-    // }
-    // else{
-    //   return false;
-    // }
   }
 
   void resetGame(){
@@ -380,6 +423,7 @@ class _HomepageState extends State<Homepage> {
                           }),
                         ),
                       ),
+                      if(gameStarted)
                       MyBall(
                           ballX: ballX,
                           ballY: ballY
@@ -420,28 +464,69 @@ class _HomepageState extends State<Homepage> {
              )
           ) ,
           Expanded(child: Container(
-            color: Colors.grey,
+            color: Colors.brown.shade800,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                if(!gameStarted)
-                  MyButton(
-                    function: startGame,
-                    icon: Icons.play_arrow,
-                  color: Colors.orangeAccent,),
+                if (!gameStarted)
+                  Column(
+                    children: [
+                      SizedBox(height: 10,),
+                      TextButton(
+                        onPressed: startGame,
+                        child: Row(
+                          children: [
+                            Icon(
+                              CupertinoIcons.play_arrow_solid,
+                              color: Colors.yellowAccent,
+                              size: 50,),
+                            Text(
+                              'PLAY',
+                              style: TextStyle(
+                                fontFamily: 'PressStart',
+                                fontSize: 26,
+                                color: Colors.yellowAccent,
+                                letterSpacing: 3,
+                              ),
+                            ),
+
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 20,),
+                      Text(
+                        'High Score:$highScore',
+                        style:TextStyle(
+                            fontFamily: 'PressStart',
+                            fontSize: 14,
+                            color: Colors.yellowAccent,
+                            letterSpacing: 1,
+                            shadows: [
+                              Shadow(
+                                  offset: Offset(1, 1),
+                                  blurRadius: 2,
+                                  color: Colors.yellow
+                              )
+                            ]
+                        ) ,)
+                    ],
+                  ),
+                if(gameStarted)
                 MyButton(
                   function: moveLeft,
                   icon: Icons.arrow_back,
-                color: Colors.blueAccent,),
+                color: buttonColor,),
+                if(gameStarted)
                 MyButton(
                   function: fireMissile,
                   icon: Icons.arrow_upward,
-                  color: Colors.redAccent,
+                  color: buttonColor,
                 ),
+                if(gameStarted)
                 MyButton(
                   function: moveRight,
                   icon: Icons.arrow_forward,
-                  color: Colors.greenAccent,
+                  color: buttonColor,
                 ),
               ],
             ),
