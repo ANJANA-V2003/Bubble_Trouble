@@ -55,21 +55,5 @@ class MyButton extends StatelessWidget {
           ),
         ),
       );
-      // ElevatedButton(
-      //   onPressed: function,
-      //   style: ElevatedButton.styleFrom(
-      //     shape: CircleBorder(),
-      //     padding: EdgeInsets.all(16),
-      //     backgroundColor: color ?? Colors.grey[300],
-      //     shadowColor: Colors.black54,
-      //     elevation: 6,
-      //   ),
-      //   child: Icon(
-      //     icon,
-      //     color: Colors.black87,
-      //     size: 24,
-      //   ),
-      // );
-
   }
 }

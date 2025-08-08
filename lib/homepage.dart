@@ -184,7 +184,7 @@ class _HomepageState extends State<Homepage> {
               ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical:12),
+              padding: EdgeInsets.symmetric(horizontal: 20  , vertical:12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)
               )
