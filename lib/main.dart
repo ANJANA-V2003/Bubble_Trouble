@@ -1,4 +1,5 @@
 import 'package:bubble_trouble/homepage.dart';
+import 'package:bubble_trouble/splashscreen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -43,7 +44,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Homepage(),
+      home: Splashscreen(
+      ),
     );
   }
 }
